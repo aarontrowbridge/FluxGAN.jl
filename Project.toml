@@ -1,0 +1,13 @@
+name = "GAN"
+uuid = "d152953c-a677-459b-a209-28d3bb85b95d"
+authors = ["AJTrowbridge <aaron.j.trowbridge@gmail.com> and contributors"]
+version = "0.1.0"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[compat]
+julia = "1"
+
+[targets]
+test = ["Test"]
