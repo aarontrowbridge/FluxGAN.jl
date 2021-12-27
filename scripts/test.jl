@@ -31,7 +31,10 @@ model = GANmodel(hyper_params)
 
 train!(model, images, n=5000, k=10)
 
-# image_diff = model.G(rand(model.hps.d)) - model.G(rand(model.hps.d))
-# image(reshape(image_diff, model.hps.data_size))
 
-image(reshape(model.G(rand(model.hps.d)), model.hps.data_size))
+gen_img = reshape(
+    model.G(rand(model.hps.NoiseDist, model.hps.d)), 
+    model.hps.data_size
+)
+
+image(gen_img)
