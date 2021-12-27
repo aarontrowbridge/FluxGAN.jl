@@ -1,5 +1,7 @@
 module GAN
 
-# Write your package code here.
+export GANHyperParams, GANHyperParamsMLP, GANmodel, train!
+
+include("models.jl")
 
 end
