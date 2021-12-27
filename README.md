@@ -1,6 +1,6 @@
 # GAN
 
-This project implements the algorithm found in "Generative Adversarial Networks" - Ian J. Goodfellow, et al. [arXiv:1406.2661](https://github.com/aarontrowbridge/GAN)
+This project uses [Flux.jl](https://fluxml.ai/Flux.jl/stable/) to implement the algorithm found in "Generative Adversarial Networks" - Ian J. Goodfellow, et al. [arXiv:1406.2661](https://github.com/aarontrowbridge/GAN)
 
 ## the idea
 
@@ -18,7 +18,6 @@ G = [(50,  sigmoid_fast),
      (75,  sigmoid_fast),
      (100, sigmoid_fast),
      (200, sigmoid_fast)]
-
 
 # generator layer structure (nodes, activation)
 D = [(200, sigmoid_fast),
