@@ -69,4 +69,4 @@ image(gen_img)
 
 This outputs the following image (not exactly a digit but we'll get there!):
 
-[](images/sample.png)
+![](images/sample.png)
