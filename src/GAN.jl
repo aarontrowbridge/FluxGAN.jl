@@ -1,6 +1,8 @@
 module GAN
 
-export GANHyperParams, GANHyperParamsMLP, GANmodel, train!
+export GANHyperParams 
+export GANModel 
+export train!
 
 include("models.jl")
 

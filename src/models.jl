@@ -1,119 +1,105 @@
 using Flux
-using Flux.Optimise: AbstractOptimiser
+using Flux.Losses: logitbinarycrossentropy 
+using Functors: @functor
 using Distributions
+using Statistics
+using Random
+using Parameters
 
-abstract type GANHyperParams end
-
-mutable struct GANHyperParamsMLP <: GANHyperParams
-
-    # data size
-    data_size::Tuple
-
-    # MLP structure hyper parameters
-    G_layers::Vector # generator layer structure
-    D_layers::Vector # discriminator layer structure
-
-    # internal representation hyper parameters
-    d::Int                  # internal representation dimension
-    NoiseDist::Distribution # noise distribution
-
-    function GANHyperParamsMLP(data_size::Tuple,
-                               G_layers::Vector,
-                               D_layers::Vector;
-                               d=100,
-                               NoiseDist=Uniform())
-        return new(data_size, G_layers, D_layers, d, NoiseDist)
-    end
+@with_kw struct GANHyperParams 
+    latent_dim::Int = 100            
+    minibatch::Int  = 50
+    iterations::Int = 1000
+    dscr_loops::Int = 1
+    η_dscr::Float32 = 0.002
+    η_gen::Float32  = 0.002
 end
 
-mutable struct GANmodel
+mutable struct GANModel
     G::Chain
     D::Chain
-    hps::GANHyperParams
+    hparams::GANHyperParams
 end
 
-function GANmodel(hps::GANHyperParamsMLP)
+@functor GANModel
 
-    # dimension of vectorized images
-    imgdim = *(hps.data_size...)
+# loss functions
 
-    # constructing generator 
-    # d-dimensional noise vector -> MLP -> vector ∈ ℝ^data_dim
-
-    G = [Dense(hps.d, hps.G_layers[1][1], hps.G_layers[1][2])]
-    for l = 1:length(hps.G_layers) - 1
-        layer = Dense(hps.G_layers[l][1], 
-                      hps.G_layers[l + 1][1], 
-                      hps.G_layers[l + 1][2])
-        push!(G, layer)
-    end
-    push!(G, Dense(hps.G_layers[end][1], imgdim, sigmoid_fast))
-
-    G = Chain(G...)
-
-    # constructing discriminator:
-    # image -> vec -> MLP -> scaler ∈ [0, 1]
-
-    D = [vec, Dense(imgdim, hps.D_layers[1][1], hps.D_layers[1][2])]
-    for l = 1:length(hps.D_layers) - 1
-        layer = Dense(hps.D_layers[l][1], 
-                      hps.D_layers[l + 1][1], 
-                      hps.D_layers[l + 1][2])
-        push!(D, layer)
-    end
-    push!(D, Dense(hps.D_layers[end][1], 1, sigmoid_fast))
-
-    D = Chain(D...)
-
-    return GANmodel(G, D, hps)
+function discriminator_loss(real_outputs, fake_outputs)
+    real_loss = logitbinarycrossentropy(real_outputs, 1) 
+    fake_loss = logitbinarycrossentropy(fake_outputs, 0) 
+    return real_loss + fake_loss
 end
 
-function train!(model::GANmodel, data::Vector{Matrix{Float32}}; 
-                opt=ADAM(), # optimization method 
-                n=1000,     # number of iterations  
-                k=1,        # loops per iteration to spend on discriminator 
-                m=10)       # minibatch size
+generator_loss(fake_outputs) = logitbinarycrossentropy(fake_outputs, 1)
 
-    # internal representation params
-    d = model.hps.d
-    NoiseDist = model.hps.NoiseDist
 
-    for i in 1:n
+# training functions
 
-        if i % 50 == 0
-            println("iteration = $i")
+function train_discriminator!(model, opt, xs, zs)
+    ω = Flux.params(model.D)
+    loss, ∇ = Flux.pullback(ω) do 
+        discriminator_loss(model.D(xs), model.D(model.G(zs)))
+    end 
+    Flux.update!(opt, ω, ∇(1f0))
+    return loss
+end
+
+function train_generator!(model, opt, zs)
+    θ = Flux.params(model.G)
+    loss, ∇ = Flux.pullback(θ) do 
+        generator_loss(model.D(model.G(zs)))
+    end 
+    Flux.update!(opt, θ, ∇(1f0))
+    return loss
+end
+
+
+# model training function
+
+function train!(model::GANModel, train_tensor::AbstractArray;
+                opt=OADAM,
+                device=cpu,
+                verbose=true, 
+                skip=50)
+
+    model = model |> device
+
+    train_tensor_size = size(train_tensor)
+    
+    d = model.hparams.latent_dim
+    m = model.hparams.minibatch
+
+    G_opt = opt(model.hparams.η_gen)     
+    D_opt = opt(model.hparams.η_dscr)
+
+    t0 = time_ns() 
+
+    gen_loss = 0 
+    dscr_loss = 0 
+
+    for i = 1:model.hparams.iterations
+
+        if verbose && i % skip == 0
+            t = time_ns()
+            println("iteration: $i of ", model.hparams.iterations)
+            println("avg seconds per loop   = ", Float32((t - t0) / skip)*1f-9) 
+            println("avg generator loss     = ", Float32(gen_loss / skip))
+            println("avg discriminator loss = ", Float32(dscr_loss / skip))
+            println()
+            gen_loss = 0
+            dscr_loss = 0
+            t0 = time_ns()
         end
 
-        # train the discriminator
-
-        for _ in 1:k 
-            xs = rand(data, m)
-            zs = [rand(NoiseDist, d) for _ in 1:m]
-
-            θ_discriminator = Flux.params(model.D)
-
-            ∇_discriminator = gradient(θ_discriminator) do 
-                -1 / m * sum(zip(xs, zs)) do (x, z)
-                    log(model.D(x)[1]) + log(1 .- model.D(model.G(z))[1])
-                end
-            end
-
-            Flux.update!(opt, θ_discriminator, ∇_discriminator)
+        for _ = 1:model.hparams.dscr_loops 
+            x_tensor = train_tensor[:,rand(1:train_tensor_size[end], m)] |> device
+            z_tensor = randn!(similar(train_tensor, (d, m))) |> device
+            dscr_loss += train_discriminator!(model, D_opt, x_tensor, z_tensor)
         end
 
-        # train the generator
-
-        zs = [rand(NoiseDist, d) for _ in 1:m]
-
-        θ_generator = Flux.params(model.G)
-
-        ∇_generator = gradient(θ_generator) do 
-            1 / m * sum(zs) do z
-                log(1 - model.D(model.G(z))[1])
-            end
-        end
-
-        Flux.update!(opt, θ_generator, ∇_generator)
+        z_tensor = randn!(similar(train_tensor, (d, m))) |> device
+        gen_loss += train_generator!(model, G_opt, z_tensor)
     end
 end
 

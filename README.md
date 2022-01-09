@@ -10,62 +10,69 @@ This first implementation uses fully connected MLPs to approximate the generator
 
 ## models
 
-To set the structure for `G` and `D`, create a list of tuples `[(nodes, activation)]`, specifying the hidden layers of the DNN. I.e.
+A `GANModel` looks like:
 
 ```julia
-# generator layer structure (nodes, activation)
-G = [(50,  sigmoid_fast),
-     (75,  sigmoid_fast),
-     (100, sigmoid_fast),
-     (200, sigmoid_fast)]
-
-# generator layer structure (nodes, activation)
-D = [(200, sigmoid_fast),
-     (100, sigmoid_fast),
-     (50,  sigmoid_fast),
-     (10,  sigmoid_fast)] 
+mutable struct GANModel
+    G::Chain
+    D::Chain
+    hparams::GANHyperParams
+end
 ```
 
-A GAN model can be constructed by supplying a hyper parameter struct, in this case `GANHyperParams <: GANHyperParams`, to create a `GANmodel`: 
+To construct a model just supply any fully connected pair `Chain`s, like so:
 
 ```julia
-hyper_params = GANHyperParamsMLP(
-    img_size,
-    G, D,
-    d=10, # internal noise vector (representation) dimension
-    NoiseDist = Normal()
+generator = Chain(
+    Dense(100, 1200, relu),
+    Dense(1200, 1200, relu),
+    Dense(1200, img_dim, tanh_fast)
 )
 
-model = GANmodel(hyper_params) 
+discriminator = Chain(
+    Maxout(() -> Dense(img_dim, 240), 5),
+    Maxout(() -> Dense(240, 240), 5),
+    Dense(240, 1)
+)
 ```
+
+and a hyperparameter struct which uses Parameters.jl and defaults to
+
+```julia
+@with_kw struct GANHyperParams 
+    latent_dim::Int = 100            
+    minibatch::Int  = 50
+    iterations::Int = 1000
+    dscr_loops::Int = 1
+    η_dscr::Float32 = 0.002
+    η_gen::Float32  = 0.002
+end
+```
+
 
 ## training the model
 
 A `train!` function is supplied with signature
 
 ```julia
-function train!(model::GANmodel, data::Vector{Matrix{Float32}}; 
-                opt=ADAM(), # optimization method 
-                n=1000,     # number of iterations  
-                k=1,        # loops per iteration to spend on discriminator 
-                m=10)       # minibatch size
+train!(model::GANModel, train_tensor::AbstractArray;
+       opt=OADAM,
+       device=cpu,
+       verbose=true, 
+       skip=50)
 ```
 
-To test out the algorithm and output and image we can run:
+## tests
 
-```julia
-train!(model, images, n = 5000, k = 10)
+There are a couple test scripts right now:
 
-gen_img = reshape(
-    model.G(rand(model.hps.NoiseDist, model.hps.d)),
-    model.hps.data_size
-)
+* mnist_goodfellow.jl
+* cifar10_goodfellow.jl
 
-using GLMakie
+and can be run from the command line using, for example
 
-image(gen_img)
-```
+`julia --project=. mnist_goodfellow.jl <device={gpu,cpu}> <iterations> <skip>`
 
-This outputs the following image (not exactly a digit but we'll get there!):
+Here is one output example from the MNIST script:
 
-![](images/sample.png)
+![](fake_images/MNIST/gen_image_grid_n_1000.png)
