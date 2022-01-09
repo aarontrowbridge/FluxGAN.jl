@@ -83,7 +83,8 @@ hparams = GANHyperParams(
     η_dscr = η,
     minibatch=50
 )
-model = GANModel(generator, discriminator, hparams)
+model = GANModel(generator, discriminator, hparams) |> device
+
 println("model created!")
 println()
 
@@ -110,7 +111,7 @@ layout = (x=4, y=3)
 
 fig = Figure(resolution=(layout.x * 150, layout.y * 150))
 for i = 1:layout.y, j = 1:layout.x
-    img = reshape(model.G(randn(Float32, hparams.latent_dim)), img_size)
+    img = reshape(model.G(randn(Float32, hparams.latent_dim) |> device) |> cpu, img_size)
     ax, = image(fig[i,j], CIFAR10.convert2image(@. (img + 1f0) / 2f0))
     hidedecorations!(ax)
     hidexdecorations!(ax, ticks=false)

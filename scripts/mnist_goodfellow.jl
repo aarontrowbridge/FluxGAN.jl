@@ -62,7 +62,8 @@ const iterations = parse(Int, ARGS[2])
 const η = 0.002f0
 
 hparams = GANHyperParams(iterations = iterations, η_gen = η, η_dscr = η)
-model = GANModel(generator, discriminator, hparams)
+model = GANModel(generator, discriminator, hparams) |> device 
+
 println("model created!")
 println()
 
@@ -87,7 +88,7 @@ using CairoMakie
 dims = (x=5, y=4)
 fig = Figure(resolution=(dims.x * 100, dims.y * 100))
 for i = 1:dims.y, j = 1:dims.x
-    img = reshape(model.G(randn(Float32, hparams.latent_dim)), img_size)
+    img = reshape(model.G(randn(Float32, hparams.latent_dim) |> device) |> cpu, img_size)
     ax, = image(fig[i,j], @. (img + 1f0) / 2f0)
     hidedecorations!(ax)
     hidexdecorations!(ax, ticks=false)

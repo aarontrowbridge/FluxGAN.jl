@@ -63,10 +63,6 @@ function train!(model::GANModel, train_tensor::AbstractArray;
                 verbose=true, 
                 skip=50)
 
-    model = model |> device
-
-    train_tensor_size = size(train_tensor)
-    
     d = model.hparams.latent_dim
     m = model.hparams.minibatch
 
@@ -93,7 +89,7 @@ function train!(model::GANModel, train_tensor::AbstractArray;
         end
 
         for _ = 1:model.hparams.dscr_loops 
-            x_tensor = train_tensor[:,rand(1:train_tensor_size[end], m)] |> device
+            x_tensor = train_tensor[:,rand(1:size(train_tensor)[end], m)] |> device
             z_tensor = randn!(similar(train_tensor, (d, m))) |> device
             dscr_loss += train_discriminator!(model, D_opt, x_tensor, z_tensor)
         end
