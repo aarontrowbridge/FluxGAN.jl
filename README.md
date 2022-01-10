@@ -16,6 +16,8 @@ A `GANModel` looks like:
 mutable struct GANModel
     G::Chain
     D::Chain
+    G_opt::AbstractOptimiser
+    D_opt::AbstractOptimiser
     hparams::GANHyperParams
 end
 ```
@@ -44,8 +46,8 @@ and a hyperparameter struct which uses Parameters.jl and defaults to
     minibatch::Int  = 50
     iterations::Int = 1000
     dscr_loops::Int = 1
-    η_dscr::Float32 = 0.002
     η_gen::Float32  = 0.002
+    η_dscr::Float32 = 0.002
 end
 ```
 
@@ -55,8 +57,8 @@ end
 A `train!` function is supplied with signature
 
 ```julia
-train!(model::GANModel, train_tensor::AbstractArray;
-       opt=OADAM,
+train!(model::GANModel, train_tensor;
+       iterations=1000,
        device=cpu,
        verbose=true, 
        skip=50)
@@ -67,12 +69,16 @@ train!(model::GANModel, train_tensor::AbstractArray;
 There are a couple test scripts right now:
 
 * mnist_goodfellow.jl
-* cifar10_goodfellow.jl
+* cifar10_mlp_goodfellow.jl
 
 and can be run from the command line using, for example
 
-`julia --project=. mnist_goodfellow.jl <device={gpu,cpu}> <iterations> <skip>`
+`julia --project=. cifar10_mlp_goodfellow.jl <device={gpu,cpu}> <iterations> <skip>`
 
-Here is one output example from the MNIST script:
+Here is an output example from the MNIST script:
 
 ![](fake_images/MNIST/gen_image_grid_n_1000.png)
+
+And here is an output from the CIFAR10 script:
+
+![](fake_images/CIFAR10/goodfellow_mlp_n_50000_gpu.png)
