@@ -103,7 +103,7 @@ And here is an output from the convolutional CIFAR10 script:
 The package exports some additional useful functions for help with converting arrays into images, using Images.jl, and plotting grids of images, using CairoMakie.jl
 
 ```julia
-color_image(imgtensor::Array) --> Matrix
+color_image(imgtensor::Array)
 ```
 
 Accepts arrays of dimension 2 or 3 and returns a matrix of `RGB` or `Gray` pixels.
