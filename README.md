@@ -147,6 +147,7 @@ to kill those processes.
 - [ ] Art GAN 
 
 ### infrastructure
+- [ ] tests
 - [ ] loss plotting
 - [ ] image sheet plotting
 - [ ] performance metrics
