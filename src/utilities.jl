@@ -29,7 +29,7 @@ end
 
 # return image grid from images tensor 
 
-function image_grid(imgs::AbstractArray, layout::NamedTuple{(:x, :y), Tuple{Int,Int}};
+function image_grid(imgs::Array, layout::NamedTuple{(:x, :y), Tuple{Int,Int}};
                     img_res = 150, hflip=true)
 
     @assert size(imgs)[end] == layout.x*layout.y "Image number ≠ grid size!"
@@ -51,15 +51,16 @@ end
 
 # save image grid plot from model 
 
-function image_grid(model::GAN, img_size::Tuple, output_dir::String;
+function image_grid(model::GAN, output_dir::String;
                     layout = (x=5, y=4),
                     img_res = 150,
                     uncenter = true,
                     date = false,
                     file_info = [])
 
+    @assert model.hparams.img_size ≠ undef "Image size not defined!"
     imgs = model.G(randn(Float32, model.hparams.latent_dim, layout.x * layout.y))
-    imgs = reshape(imgs, img_size..., :) 
+    imgs = reshape(imgs, model.hparams.img_size..., :) 
     if uncenter imgs = @. (imgs + 1f0) / 2f0 end
 
     fig = image_grid(imgs, layout, img_res=img_res)

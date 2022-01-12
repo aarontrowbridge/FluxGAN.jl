@@ -57,7 +57,7 @@ end
 A `train!` function is supplied with signature
 
 ```julia
-train!(model::GAN, train_tensor; kws...)
+train!(model::GAN, train_tensor::AbstractArray; kws...)
 
 ```
 This function sees if a GPU is available, in which case it calls
@@ -67,7 +67,9 @@ train_gpu!(model::GAN, train_tensor::AbstractArray;
            iterations=1000, verbose=true, skip=50)
 ```
 
-So the important key words are:
+If no GPU is available it will just use the cpu via `train_cpu!`, which has the same signature.
+
+The important key words are:
 
 * `iterations`: how many training runs to do
 * `verbose`: whether or not to print periodic updates during training
@@ -77,13 +79,13 @@ Take a look at the file `src/train.jl` to see how things work; what's great abou
 
 ## tests
 
-There are a few test programs available in the `scripts` directory:
+There are a few examples available in the `scripts` directory:
 
 * mnist_goodfellow.jl
 * cifar10_mlp_goodfellow.jl
 * cifar10_conv_goodfellow.jl
 
-and can be run from the command line using, e.g.
+These can be run from the command line using, e.g.
 
 `julia --project=. scripts/cifar10_conv_goodfellow.jl <iterations> <minibatch> <skip>`
 
@@ -94,6 +96,34 @@ Here is an output example from the MNIST script:
 And here is an output from the convolutional CIFAR10 script:
 
 ![](images/CIFAR10/animals_conv_n_25000_m_50_grid_5_5.png)
+
+
+## utilities
+
+The package exports some additional useful functions for help with converting arrays into images, using Images.jl, and plotting grids of images, using CairoMakie.jl
+
+```julia
+color_image(imgtensor::Array) --> Matrix
+```
+
+Accepts arrays of dimension 2 or 3 and returns a matrix of `RGB` or `Gray` pixels.
+
+```julia
+image_grid(imgs::Array, layout::NamedTuple{(:x, :y), Tuple{Int,Int}};
+           img_res = 150, hflip=true)
+```
+Accepts a tensor of images (e.g. `Array{Float32, 32, 32, 3, n}` for some `n` being the number of images) and named tuple (e.g. `(x=5, y=5)`) specifying the layout of the grid.
+
+```julia
+image_grid(model::GAN, output_dir::String;
+           layout = (x=5, y=4),
+           img_res = 150,
+           uncenter = true,
+           date = false,
+           file_info = [])
+```
+The only tricky bit here is `file_info`, which just transmits some information to the ultimate file name; one can see use examples in any of the scripts.
+
 
 ## GPU
 
