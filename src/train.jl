@@ -15,7 +15,7 @@ using CUDA
 
 # main training function - attempts to train on GPU
 
-function train!(model::GAN, train_tensor::Array; kws...)
+function train!(model::GAN, train_tensor::AbstractArray; kws...)
     if has_cuda_gpu()
         println("training GAN with GPU...")
         train_gpu!(model, train_tensor; kws...)
@@ -27,7 +27,7 @@ end
 
 # gpu training function
 
-function train_gpu!(model::GAN, train_tensor::Array; 
+function train_gpu!(model::GAN, train_tensor::AbstractArray; 
                     iterations=1000, verbose=true, skip=50)
 
     d = model.hparams.latent_dim
@@ -61,7 +61,7 @@ end
 
 # cpu training function
 
-function train_cpu!(model::GAN, train_tensor::Array; 
+function train_cpu!(model::GAN, train_tensor::AbstractArray; 
                     iterations=1000, verbose=true, skip=50)
 
     d = model.hparams.latent_dim
@@ -91,7 +91,7 @@ end
 
 # discriminator train function
 
-function train_discriminator!(model::GAN, xs::Array, zs::Array)
+function train_discriminator!(model::GAN, xs::AbstractArray, zs::AbstractArray)
     ω = Flux.params(model.D)
     loss, ∇ = Flux.pullback(ω) do 
         discriminator_loss(model.D(xs), model.D(model.G(zs)))
@@ -103,7 +103,7 @@ end
 
 # generator train function
 
-function train_generator!(model::GAN, zs::Array)
+function train_generator!(model::GAN, zs::AbstractArray)
     θ = Flux.params(model.G)
     loss, ∇ = Flux.pullback(θ) do 
         generator_loss(model.D(model.G(zs)))

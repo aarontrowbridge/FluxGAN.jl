@@ -1,6 +1,6 @@
-using GAN
+using FluxGAN
 using Test
 
-@testset "GAN.jl" begin
+@testset "FluxGAN.jl" begin
     # Write your tests here.
 end

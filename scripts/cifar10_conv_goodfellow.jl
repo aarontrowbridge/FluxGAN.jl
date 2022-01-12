@@ -82,7 +82,7 @@ output_dir = "images/CIFAR10"
 
 info = ["animals", "conv", "n", n, "m", m]
 
-image_grid(model, img_size, output_dir; 
+image_grid(model, output_dir; 
     layout=layout, 
     file_info=info,
     img_res=150

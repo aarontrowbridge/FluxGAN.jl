@@ -56,7 +56,7 @@ info = ["MLP", "n", n, "m", m]
 
 layout = (x=5, y=5)
 
-image_grid(model, img_size, output_dir, 
+image_grid(model, output_dir, 
     layout=layout, 
     file_info=info, 
     img_res=150
