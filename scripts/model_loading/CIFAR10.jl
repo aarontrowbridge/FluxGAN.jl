@@ -1,20 +1,16 @@
-using GAN
+using FluxGAN
 using BSON: @load
 using Flux
-using CairoMakie
-using CUDA
 
-@load "models/cifar10_goodfellow_MLP.bson" model
+# FIXME: loading errs here
+@load "models/cifar10_goodfellow_MLP_n_25.bson" model
 
 layout = (x=4, y=3)
 
-fig = Figure(resolution=(layout.x * 150, layout.y * 150))
-for i = 1:layout.y, j = 1:layout.x
-    fake = reshape(model.G(randn(Float32, model.hparams.latent_dim)), (32, 32, 3))
-    ax, = image(fig[i,j], color_image(@. (fake + 1f0) / 2f0))
-    hidedecorations!(ax)
-    hidexdecorations!(ax, ticks=false)
-    hideydecorations!(ax, ticks=false)
-end
-save("fake_images/CIFAR10/goodfellow_mlp_loaded.png", fig)
+output_dir = "images/CIFAR10"
 
+info = ["cifar10", "n", "25"]
+
+image_grid(model, model.hparams.img_size, output_dir,
+           layout=layout,
+           file_info=info)

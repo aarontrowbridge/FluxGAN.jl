@@ -1,14 +1,11 @@
-using GAN
 using Flux
+using FluxGAN
 using BSON: @save
 using MLDatasets
-using ImageCore
-using CUDA
-CUDA.allowscalar(true)
 
-const device = eval(Symbol(ARGS[1]))
+const n = parse(Int, ARGS[1]) 
+const m = parse(Int, ARGS[2])
 const skip = parse(Int, ARGS[3]) 
-const n = parse(Int, ARGS[2]) 
 
 
 # dataset  
@@ -33,51 +30,62 @@ const img_size = size(animal_tensor)[1:end-1]
 const img_num  = size(animal_tensor)[end]
 const img_dim  = *(img_size...) 
 
-# centering pixels and flattening images
-animal_tensor = reshape((@. 2f0 * animal_tensor - 1f0), (img_dim, img_num))
+# centering pixels
+animal_tensor = @. 2f0 * animal_tensor - 1f0
 
 const d = 100
 
 generator = Chain(
     Dense(d, 8000, relu),
     Dense(8000, 8000, tanh_fast),
-    x -> reshape(x, (10, 10, 80)),
-    ConvTranspose((5, 5), 80 => 3, tanh_fast)
+    x -> reshape(x, 10, 10, 80, size(x)[end]),
+    ConvTranspose((5, 5), 80 => 3, tanh_fast; stride=(3,3))
 )
 
 discriminator = Chain(
-    Maxout(() -> Conv((8, 8), 3 => 32, pad=4), 2),
-    MeanPool((4, 4), stride=(2, 2)),
+    Maxout(() -> Conv((8, 8), 3 => 32; pad=4), 2),
+    MeanPool((4, 4); stride=(2, 2)),
+    Maxout(() -> Conv((8, 8), 32 => 32, pad=3), 2),
+    MeanPool((4, 4); stride=(2, 2)),
+    Maxout(() -> Conv((5, 5), 32 => 192, pad=3), 2),
+    MeanPool((2, 2); stride=(2, 2)),
+    x -> reshape(x, 3072, size(x)[end]),
+    Maxout(() -> Dense(3072, 500), 5),
+    Dense(500, 1)
 )
 
 # learning rate
 const η = 0.0001f0
 
-model = GANModel(generator, discriminator, η_gen=η, η_dscr=η)
+model = GAN(generator, discriminator; 
+    η_gen=η, 
+    η_dscr=η, 
+    minibatch=m,
+    latent_dim=d,
+    img_size=img_size
+)
 
-train!(model, animal_tensor, skip=skip, device=device, iterations=n, latent_dim=d)
+train!(model, animal_tensor, skip=skip, iterations=n)
 
 # uncomment below to save model after training
-# @save "models/cifar10_goodfellow_MLP_test.bson" model
+# FIXME: saving errs here
 
-println("saving generated images...")
+# println("\nsaving model...")
+# @save "models/cifar10_goodfellow_conv_n_$(n).bson" model
+# println("model saved!")
 
-using CairoMakie
+println("\nsaving generated images...")
 
-layout = (x=4, y=3)
+layout = (x=5, y=5)
 
-fig = Figure(resolution=(layout.x * 150, layout.y * 150))
-for i = 1:layout.y, j = 1:layout.x
-    img = reshape(
-        model.G(randn(Float32, model.hparams.latent_dim) |> device) |> cpu,
-        img_size
-    )
-    ax, = image(fig[i,j], color_image(@. (img + 1f0) / 2f0))
-    hidedecorations!(ax)
-    hidexdecorations!(ax, ticks=false)
-    hideydecorations!(ax, ticks=false)
-end
-save("fake_images/CIFAR10/gen_image_grid_n_$(iterations)_$(device).png", fig)
+output_dir = "images/CIFAR10"
 
-println("finished!")
-println()
+info = ["animals", "conv", "n", n, "m", m]
+
+image_grid(model, img_size, output_dir; 
+    layout=layout, 
+    file_info=info,
+    img_res=150
+)
+
+println("finished!\n")

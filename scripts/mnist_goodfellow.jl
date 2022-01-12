@@ -1,12 +1,10 @@
-using GAN
+using FluxGAN
+using MLDatasets
 using Flux
 using BSON: @save
-using MLDatasets
-using CUDA
-CUDA.allowscalar(true)
 
-const device = eval(Symbol(ARGS[1]))
-const iterations = parse(Int, ARGS[2]) 
+const n = parse(Int, ARGS[1]) 
+const m = parse(Int, ARGS[2])
 const skip = parse(Int, ARGS[3]) 
 
 images = MNIST.traintensor(Float32)
@@ -18,8 +16,10 @@ const img_dim  = *(img_size...)
 # centering pixels, mapping to [-1,1]; and flattening image tensors
 images = reshape((@. 2f0 * images - 1f0), (img_dim, img_num)) 
 
+const d = 100
+
 generator = Chain(
-    Dense(100, 1200, relu),
+    Dense(d, 1200, relu),
     Dense(1200, 1200, relu),
     Dense(1200, img_dim, tanh_fast)
 )
@@ -33,28 +33,33 @@ discriminator = Chain(
 # learning rate
 const η = 0.0002f0
 
-model = GANModel(generator, discriminator, η_gen=η, η_dscr=η) 
+# minibatch size
 
-train!(model, images, skip=skip, device=device, iterations=iterations)
+model = GAN(generator, discriminator; 
+    minibatch=m, 
+    η_gen=η, 
+    η_dscr=η, 
+    latent_dim=d,
+    img_size=img_size
+) 
+
+train!(model, images, iterations=n, skip=skip)
 
 # uncomment below to save model when done training
 # @save "models/mnist_goodfellow_MLP_test.bson" model
 
-println("saving generated images...")
-println()
+println("\nsaving generated images...\n")
 
-using CairoMakie
+output_dir = "images/MNIST"
 
-layout = (x=5, y=4)
-fig = Figure(resolution=(layout.x * 100, layout.y * 100))
-for i = 1:layout.y, j = 1:layout.x
-    img = reshape(model.G(randn(Float32, hparams.latent_dim) |> device) |> cpu, img_size)
-    ax, = image(fig[i,j], @. (img + 1f0) / 2f0)
-    hidedecorations!(ax)
-    hidexdecorations!(ax, ticks=false)
-    hideydecorations!(ax, ticks=false)
-end
-save("fake_images/MNIST/gen_image_grid_n_$(iterations)_$(device).png", fig)
+info = ["MLP", "n", n, "m", m]
 
-println("finished!")
-println()
+layout = (x=5, y=5)
+
+image_grid(model, img_size, output_dir, 
+    layout=layout, 
+    file_info=info, 
+    img_res=150
+)
+
+println("finished!\n")
