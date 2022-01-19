@@ -3,10 +3,13 @@ module Train
 export train!
 
 using FluxGAN: GAN
+using FluxGAN: image_grid
 
 using Flux
 using Flux.Losses: logitbinarycrossentropy 
 using EllipsisNotation
+using Colors
+using FileIO
 using CUDA
 
 ######################
@@ -28,7 +31,10 @@ end
 # gpu training function
 
 function train_gpu!(model::GAN, train_tensor::AbstractArray; 
-                    iterations=1000, verbose=true, skip=50)
+                    iterations=1000, verbose=true, skip=50,
+                    gif=false, gif_path="gifs", gif_layout=(5, 5), gif_fps=25,
+                    gif_filename="", kws...)
+
 
     d = model.hparams.latent_dim
     m = model.hparams.minibatch
@@ -38,11 +44,20 @@ function train_gpu!(model::GAN, train_tensor::AbstractArray;
 
     t0 = time_ns() 
 
+    if gif
+        rows, cols = gif_layout
+        h, w = model.hparams.img_size[1:2]
+        gif_tensor = Array{Color}(undef, h * rows, w * cols, div(iterations, skip))
+    end
+
     model.G = model.G |> gpu 
     model.D = model.D |> gpu 
     for i = 1:iterations
         if verbose && i % skip == 0
-            training_message(i, iterations, t0, gen_loss, dscr_loss, skip)
+            training_message(i, iterations, t0, gen_loss, dscr_loss, skip; kws...)
+            if gif
+                gif_tensor[:,:,div(i, skip)] = image_grid(model, gif_layout; seed=true) 
+            end                
             gen_loss = 0
             dscr_loss = 0
             t0 = time_ns()
@@ -57,12 +72,20 @@ function train_gpu!(model::GAN, train_tensor::AbstractArray;
     end
     model.G = model.G |> cpu
     model.D = model.D |> cpu
+
+    if gif
+        save(gif_path * "/" * gif_filename * "_n_$(iterations)_" *  
+             "grid_$(gif_layout[1])_$(gif_layout[2])" * ".gif", 
+             gif_tensor; fps=gif_fps)
+    end
 end
 
 # cpu training function
 
 function train_cpu!(model::GAN, train_tensor::AbstractArray; 
-                    iterations=1000, verbose=true, skip=50)
+                    iterations=1000, verbose=true, skip=50, 
+                    gif=false, gif_path="images/gifs", gif_layout=(5, 5), gif_fps=25,
+                    gif_filename="", kws...)
 
     d = model.hparams.latent_dim
     m = model.hparams.minibatch
@@ -72,9 +95,20 @@ function train_cpu!(model::GAN, train_tensor::AbstractArray;
 
     t0 = time_ns() 
 
+    if gif
+        gif_tensor = Array{Color}(undef, size(train_tensor)[1:2]...,
+                                       *(gif_layout...),
+                                       div(iterations, skip))
+    end
+
     for i = 1:iterations
         if verbose && i % skip == 0
-            training_message(i, iterations, t0, gen_loss, dscr_loss, skip)
+            training_message(i, iterations, t0, gen_loss, dscr_loss, skip; kws...)
+            if gif
+                gif_tensor[..,div(i, skip)] = image_grid_tensor(model, 
+                                                *(gif_layout...);
+                                                seed=true)
+            end                
             gen_loss = 0
             dscr_loss = 0
             t0 = time_ns()
@@ -86,6 +120,12 @@ function train_cpu!(model::GAN, train_tensor::AbstractArray;
         end
         z_tensor = randn(Float32, d, m) 
         gen_loss += train_generator!(model, z_tensor)
+    end
+
+    if gif
+        save(gif_path * "/" * gif_filename * "_n_$(iterations)_" *  
+             "grid_$(gif_layout[1])_$(gif_layout[2])" * ".gif", 
+             gif_tensor; fps=gif_fps)
     end
 end
 
@@ -113,20 +153,6 @@ function train_generator!(model::GAN, zs::AbstractArray)
     return loss
 end
 
-# training message function
-
-# TODO: add plotting functionality
-#       * mean training loss
-#       * maybe error bars
-
-function training_message(i, iterations, t0, gen_loss, dscr_loss, skip)
-    t = time_ns()
-    println("\niteration: $i of ", iterations)
-    println("avg seconds per loop   = ", Float32((t - t0) / skip)*1f-9) 
-    println("avg generator loss     = ", Float32(gen_loss / skip))
-    println("avg discriminator loss = ", Float32(dscr_loss / skip))
-end
-
 ##################
 # loss functions #
 ##################
@@ -138,5 +164,19 @@ function discriminator_loss(real_outputs, fake_outputs)
 end
 
 generator_loss(fake_outputs) = logitbinarycrossentropy(fake_outputs, 1)
+
+# training message function
+
+# TODO: add plotting functionality
+#           * mean training loss
+#           * maybe error bars
+
+function training_message(i, iterations, t0, gen_loss, dscr_loss, skip) 
+    t = time_ns()
+    println("\niteration: $i of ", iterations)
+    println("avg seconds per loop   = ", Float32((t - t0) / skip)*1f-9) 
+    println("avg generator loss     = ", Float32(gen_loss / skip))
+    println("avg discriminator loss = ", Float32(dscr_loss / skip))
+end
 
 end

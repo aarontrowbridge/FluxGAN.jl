@@ -23,14 +23,14 @@ classnames = CIFAR10.classnames()
 
 # removing any images that aren't animals
 animal_indices = findall(lab -> classnames[lab + 1] in animal_classnames, train_labels)
-animal_tensor = train_tensor[:,:,:,animal_indices]
+animals_tensor = train_tensor[:,:,:,animal_indices]
 
-const img_size = size(animal_tensor)[1:end-1]
-const img_num  = size(animal_tensor)[end]
+const img_size = size(animals_tensor)[1:end-1]
+const img_num  = size(animals_tensor)[end]
 const img_dim  = *(img_size...) 
 
 # centering pixels and flattening images
-animal_tensor = reshape((@. 2f0 * animal_tensor - 1f0), (img_dim, img_num))
+animals_tensor = reshape((@. 2f0 * animals_tensor - 1f0), (img_dim, img_num))
 
 const d = 100
 
@@ -59,7 +59,7 @@ model = GAN(generator, discriminator;
     img_size=img_size
 )
 
-train!(model, animal_tensor, skip=skip, iterations=n)
+train!(model, animals_tensor, skip=skip, iterations=n)
 
 # uncomment below to save model after training
 
@@ -67,7 +67,7 @@ train!(model, animal_tensor, skip=skip, iterations=n)
 # @save "models/cifar10_goodfellow_MLP_n_$n.bson" model 
 # println("saved!\n")
 
-println("plotting generated images...")
+println("\nplotting generated images...")
 
 layout = (x=5, y=5)
 
