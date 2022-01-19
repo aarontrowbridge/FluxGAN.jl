@@ -75,7 +75,7 @@ function train_gpu!(model::GAN, train_tensor::AbstractArray;
 
     if gif
         save(gif_path * "/" * gif_filename * "_n_$(iterations)_" *  
-             "grid_$(gif_layout[1])_$(gif_layout[2])" * ".gif", 
+             "grid_$(rows)_$(cols)" * ".gif", 
              gif_tensor; fps=gif_fps)
     end
 end

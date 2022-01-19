@@ -70,6 +70,7 @@ println("beginning training...\n")
 train!(model, animal_tensor, skip=skip, iterations=n,
     gif=true,
     gif_filename="CIFAR10/conv",
-    gif_fps=10)
+    gif_fps=5
+)
 
-println("finished!\n")
+println("\nfinished!\n")
