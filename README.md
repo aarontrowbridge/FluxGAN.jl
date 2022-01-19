@@ -149,9 +149,14 @@ to kill those processes.
 - [ ] Conditional GAN
 - [ ] Wasserstein GAN
 - [ ] Art GAN 
+- [ ] Stein GAN
 
 ### infrastructure
 - [ ] tests
 - [ ] loss plotting
 - [ ] image sheet plotting
 - [ ] performance metrics
+
+### miscellaneous 
+- [x] gifs
+- [ ] streamline training functionality
