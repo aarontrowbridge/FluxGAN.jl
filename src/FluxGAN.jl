@@ -14,6 +14,7 @@ export image_grid_figure
 export image_grid_tensor
 export image_grid
 export color_image
+export color_image_tensor
 
 include("train.jl")
 using .Train

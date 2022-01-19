@@ -6,6 +6,15 @@ This project uses [Flux.jl](https://fluxml.ai/Flux.jl/stable/) to implement Gene
 
 This package provides a functionality for constructing GANs and training them according to the algorithm in Goodfellow's original paper.  
 
+## installation
+
+To install and use this package, first clone it using, e.g. `git clone`, into a directory on your machine.  Then, open a julia REPL, type `]` to enter the package mode and then do:
+
+```
+(v1.7) pkg> activate .
+
+(FluxGAN) pkg> instantiate
+```
 
 ## models
 
@@ -100,27 +109,22 @@ And here is an output from the convolutional CIFAR10 script:
 
 ## utilities
 
-The package exports some additional useful functions for help with converting arrays into images, using Images.jl, and plotting grids of images, using CairoMakie.jl
+The package exports some additional useful functions for help with converting arrays into images, using Images.jl, and plotting grids of images, using CairoMakie.jl.  Some example are:
 
 ```julia
-color_image(imgtensor::Array)
+color_image(img::Array)
 ```
 
 Accepts arrays of dimension 2 or 3 and returns a matrix of `RGB` or `Gray` pixels.
 
 ```julia
-image_grid(imgs::Array, layout::NamedTuple{(:x, :y), Tuple{Int,Int}};
-           img_res = 150, hflip=true)
-```
-Accepts a tensor of images (e.g. `Array{Float32, 32, 32, 3, n}` for some `n` being the number of images) and named tuple (e.g. `(x=5, y=5)`) specifying the layout of the grid.
-
-```julia
-image_grid(model::GAN, output_dir::String;
-           layout = (x=5, y=4),
-           img_res = 150,
-           uncenter = true,
-           date = false,
-           file_info = [])
+save_image_grid(model::GAN, output_dir::String;
+                layout = (5, 5),
+                img_res = 150,
+                uncenter = true,
+                date = false,
+                file_info = [],
+                kws...)
 ```
 The only tricky bit here is `file_info`, which just transmits some information to the ultimate file name; one can see use examples in any of the scripts.
 

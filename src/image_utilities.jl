@@ -5,6 +5,7 @@ export image_grid_figure
 export image_grid_tensor
 export image_grid
 export color_image
+export color_image_tensor
 
 using FluxGAN: GAN
 
@@ -68,6 +69,8 @@ function image_grid(imgs::Array{Color, 3}, layout::Tuple{Int,Int})
     grid
 end
 
+# return image grid from GAN and layout
+# 
 function image_grid(model::GAN, layout::Tuple{Int,Int}; kws...)
     imgs = image_grid_tensor(model, *(layout...); kws...)
     image_grid(imgs, layout)
