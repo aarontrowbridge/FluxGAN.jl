@@ -156,6 +156,7 @@ to kill those processes.
 - [ ] loss plotting
 - [ ] image sheet plotting
 - [ ] performance metrics
+  - [ ] inception score
 
 ### miscellaneous 
 - [x] gifs

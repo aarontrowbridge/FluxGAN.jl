@@ -1,6 +1,6 @@
 using Flux
 using FluxGAN
-using BSON: @save
+using FileIO
 using MLDatasets
 
 const n = parse(Int, ARGS[1])    # iterations 
@@ -63,22 +63,22 @@ train!(model, animals_tensor, skip=skip, iterations=n)
 
 # uncomment below to save model after training
 
-# println("saving model...")
-# @save "models/cifar10_goodfellow_MLP_n_$n.bson" model 
-# println("saved!\n")
+println("\nsaving model...")
+save("models/cifar10_goodfellow_MLP_n_$n.jld2", Dict("model" => model)) 
+println("saved!\n")
 
-println("\nplotting generated images...")
+# println("plotting generated images...")
 
-layout = (x=5, y=5)
+# layout = (5, 5)
 
-output_dir = "images/CIFAR10"
+# output_dir = "images/CIFAR10"
 
-info = ["animals", "MLP", "n", n, "m", m]
+# info = ["animals", "MLP", "n", n, "m", m]
 
-image_grid(model, output_dir, 
-    layout=layout, 
-    file_info=info,
-    img_res=150
-)
+# save_image_grid(model, output_dir; 
+#     layout=layout, 
+#     file_info=info,
+#     img_res=150
+# )
 
 println("finished!\n")

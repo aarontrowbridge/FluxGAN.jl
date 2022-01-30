@@ -27,35 +27,36 @@ end
 abstract type AbstractGAN end
 
 mutable struct GAN <: AbstractGAN
-    G::Chain
-    D::Chain
+    G::Chain{T} where T
+    D::Chain{H} where H
     G_opt::AbstractOptimiser
     D_opt::AbstractOptimiser
     hparams::GANHyperParams
-    
-    function GAN(G::Chain, D::Chain; kws...) 
-        hparams = GANHyperParams(; kws...)
-        G_opt = OADAM(hparams.η_gen)
-        D_opt = OADAM(hparams.η_dscr)
-        return new(G, D, G_opt, D_opt, hparams)
-    end
-
-    function GAN(G::Chain, D::Chain, opt::AbstractOptimiser; kws...) 
-        hparams = GANHyperParams(; kws...)
-        G_opt = opt(hparams.η_gen)
-        D_opt = opt(hparams.η_dscr)
-        return new(G, D, G_opt, D_opt, hparams)
-    end
-
-    function GAN(G::Chain, D::Chain, 
-                 G_opt::AbstractOptimiser, D_opt::AbstractOptimiser; kws...) 
-        hparams = GANHyperParams(; kws...)
-        G_opt = G_opt(hparams.η_gen)
-        D_opt = D_opt(hparams.η_dscr)
-        return new(G, D, G_opt, D_opt, hparams)
-    end
 end
 
+function GAN(G::Chain{T}, D::Chain{H}; kws...) where {T, H} 
+    hparams = GANHyperParams(; kws...)
+    G_opt = OADAM(hparams.η_gen)
+    D_opt = OADAM(hparams.η_dscr)
+    return GAN(G, D, G_opt, D_opt, hparams)
+end
+
+function GAN(G::Chain{T}, D::Chain{H}, opt::AbstractOptimiser; kws...) where {T,H} 
+    hparams = GANHyperParams(; kws...)
+    G_opt = opt(hparams.η_gen)
+    D_opt = opt(hparams.η_dscr)
+    return GAN(G, D, G_opt, D_opt, hparams)
+end
+
+function GAN(G::Chain{T}, D::Chain{H}, 
+             G_opt::AbstractOptimiser, D_opt::AbstractOptimiser; kws...) where {T,H}
+    hparams = GANHyperParams(; kws...)
+    G_opt = G_opt(hparams.η_gen)
+    D_opt = D_opt(hparams.η_dscr)
+    return GAN(G, D, G_opt, D_opt, hparams)
+end
+
+Flux.@functor GAN
 # TODO: add conditional GAN model (CondGAN)
 # TODO: add art GAN model (ArtGAN)
 

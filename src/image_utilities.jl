@@ -24,11 +24,11 @@ using Random
 # save image grid figure from model 
 #
 function save_image_grid(model::GAN, output_dir::String;
-                    layout=(5, 5),
-                    date=false,
-                    file_info=[],
-                    img_res=150,
-                    kws...)
+                         layout=(5, 5),
+                         date=false,
+                         file_info=[],
+                         img_res=150,
+                         kws...)
     if file_info == []
         info = ""
     else
@@ -36,7 +36,7 @@ function save_image_grid(model::GAN, output_dir::String;
     end
     file = info * "grid_$(layout[1])_$(layout[2])" * 
            (date ? "_" * string(today()) : "") 
-    imgs = image_grid_tensor(model, layout.x * layout.y; kws...)
+    imgs = image_grid_tensor(model, *(layout...); kws...)
     fig = image_grid_figure(imgs, layout; img_res=img_res)
     save(output_dir * "/" * file * ".png", fig)
 end
@@ -54,38 +54,16 @@ function image_grid_tensor(model::GAN, n::Int;
     color_image_tensor(imgs)
 end
 
-# convert images tensor into an image grid
-#
-function image_grid(imgs::Array{Color, 3}, layout::Tuple{Int,Int})
-    h, w, n = size(imgs)
-    rows, cols = layout
-    @assert rows * cols == n "Number of images ≠ grid size!"
-    grid = Array{Color}(undef, h * rows, w * cols)
-    for i = 1:rows, j = 1:cols
-        img = imgs[:,:, i + rows*(j - 1)]
-        # img = reverse(img, dims=2)
-        grid[((i - 1)*h + 1):i*h, ((j - 1)*w + 1):j*w] = img' 
-    end
-    grid
-end
-
-# return image grid from GAN and layout
-# 
-function image_grid(model::GAN, layout::Tuple{Int,Int}; kws...)
-    imgs = image_grid_tensor(model, *(layout...); kws...)
-    image_grid(imgs, layout)
-end
-
 # return image grid makie figure from image grid tensor 
 #
 function image_grid_figure(imgs::Array, layout::Tuple{Int,Int};
-                           img_res=150, hflip=true)
+                           img_res=150, 
+                           hflip=true)
     n = size(imgs)[end] 
     rows, cols = layout
     @assert rows * cols == n "Number of images ≠ grid size!"
 
     imgs = [imgs[.., i] for i in 1:n]
-    imgs = color_image.(imgs)
 
     if hflip imgs = map(img -> reverse(img, dims=2), imgs) end
 
@@ -97,6 +75,27 @@ function image_grid_figure(imgs::Array, layout::Tuple{Int,Int};
         hideydecorations!(ax, ticks=false)
     end
     fig
+end
+
+# return image grid from GAN and layout
+# 
+function image_grid(model::GAN, layout::Tuple{Int,Int}; kws...)
+    imgs = image_grid_tensor(model, *(layout...); kws...)
+    image_grid(imgs, layout)
+end
+
+# convert images tensor into an image grid
+#
+function image_grid(imgs::Array{Color, 3}, layout::Tuple{Int,Int})
+    h, w, n = size(imgs)
+    rows, cols = layout
+    @assert rows * cols == n "Number of images ≠ grid size!"
+    grid = Array{Color}(undef, h * rows, w * cols)
+    for i = 1:rows, j = 1:cols
+        img = imgs[:, :, i + rows*(j - 1)]
+        grid[((i - 1)*h + 1):i*h, ((j - 1)*w + 1):j*w] = img' 
+    end
+    grid
 end
 
 # return color RGB image from image array
@@ -117,7 +116,9 @@ end
 function color_image_tensor(imgs::Array)
     color_imgs = Array{Color}(undef, size(imgs)[1:2]..., size(imgs)[end])
     for i = 1:size(imgs)[end]
-        color_imgs[:,:,i] = color_image(imgs[..,i])
+        color_imgs[:, :, i] = color_image(imgs[.., i])
     end
     color_imgs
+end
+
 end

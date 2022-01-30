@@ -50,8 +50,7 @@ function train_gpu!(model::GAN, train_tensor::AbstractArray;
         gif_tensor = Array{Color}(undef, h * rows, w * cols, div(iterations, skip))
     end
 
-    model.G = model.G |> gpu 
-    model.D = model.D |> gpu 
+    model = fmap(gpu, model)
     for i = 1:iterations
         if verbose && i % skip == 0
             training_message(i, iterations, t0, gen_loss, dscr_loss, skip; kws...)
@@ -70,8 +69,7 @@ function train_gpu!(model::GAN, train_tensor::AbstractArray;
         z_tensor = CUDA.randn(Float32, d, m) 
         gen_loss += train_generator!(model, z_tensor)
     end
-    model.G = model.G |> cpu
-    model.D = model.D |> cpu
+    model = fmap(cpu, model)
 
     if gif
         save(gif_path * "/" * gif_filename * "_n_$(iterations)_" *  
