@@ -153,11 +153,13 @@ to kill those processes.
 
 ### infrastructure
 - [ ] tests
-- [ ] loss plotting
-- [ ] image sheet plotting
+- [ ] custom training message passing
 - [ ] performance metrics
   - [ ] inception score
 
 ### miscellaneous 
+- [x] loss plotting
 - [x] gifs
+- [ ] image sheet plotting
+- [ ] interpolation function
 - [ ] streamline training functionality

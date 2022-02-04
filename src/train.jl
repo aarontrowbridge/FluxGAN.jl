@@ -8,6 +8,7 @@ using FluxGAN: image_grid
 using Flux
 using Flux.Losses: logitbinarycrossentropy 
 using EllipsisNotation
+using Statistics
 using Colors
 using FileIO
 using CUDA
@@ -33,14 +34,17 @@ end
 function train_gpu!(model::GAN, train_tensor::AbstractArray; 
                     iterations=1000, verbose=true, skip=50,
                     gif=false, gif_path="gifs", gif_layout=(5, 5), gif_fps=25,
-                    gif_filename="", kws...)
+                    gif_filename="", return_losses=false, kws...)
 
 
     d = model.hparams.latent_dim
     m = model.hparams.minibatch
 
-    gen_loss = 0 
-    dscr_loss = 0 
+    mean_gen_losses = Float32[]
+    mean_dscr_losses = Float32[]
+
+    gen_losses = Float32[] 
+    dscr_losses = Float32[] 
 
     t0 = time_ns() 
 
@@ -53,21 +57,27 @@ function train_gpu!(model::GAN, train_tensor::AbstractArray;
     model = fmap(gpu, model)
     for i = 1:iterations
         if verbose && i % skip == 0
-            training_message(i, iterations, t0, gen_loss, dscr_loss, skip; kws...)
+            mean_gen_loss = mean(gen_losses)
+            mean_dscr_loss = mean(dscr_losses)
+            push!(mean_gen_losses, mean_gen_loss)
+            push!(mean_dscr_losses, mean_dscr_loss)
+            training_message(i, iterations, t0, mean_gen_loss, mean_dscr_loss, skip; kws...)
             if gif
                 gif_tensor[:,:,div(i, skip)] = image_grid(model, gif_layout; seed=true) 
             end                
-            gen_loss = 0
-            dscr_loss = 0
+            gen_losses = []
+            dscr_losses = []
             t0 = time_ns()
         end
         for _ = 1:model.hparams.dscr_loops 
             x_tensor = train_tensor[.., rand(1:size(train_tensor)[end], m)] |> gpu
             z_tensor = CUDA.randn(Float32, d, m) 
-            dscr_loss += train_discriminator!(model, x_tensor, z_tensor)
+            dscr_loss = train_discriminator!(model, x_tensor, z_tensor)
+            push!(dscr_losses, dscr_loss)
         end
         z_tensor = CUDA.randn(Float32, d, m) 
-        gen_loss += train_generator!(model, z_tensor)
+        gen_loss = train_generator!(model, z_tensor)
+        push!(gen_losses, gen_loss)
     end
     model = fmap(cpu, model)
 
@@ -75,6 +85,10 @@ function train_gpu!(model::GAN, train_tensor::AbstractArray;
         save(gif_path * "/" * gif_filename * "_n_$(iterations)_" *  
              "grid_$(rows)_$(cols)" * ".gif", 
              gif_tensor; fps=gif_fps)
+    end
+
+    if return_losses
+        return mean_gen_losses, mean_dscr_losses
     end
 end
 
@@ -173,8 +187,8 @@ function training_message(i, iterations, t0, gen_loss, dscr_loss, skip)
     t = time_ns()
     println("\niteration: $i of ", iterations)
     println("avg seconds per loop   = ", Float32((t - t0) / skip)*1f-9) 
-    println("avg generator loss     = ", Float32(gen_loss / skip))
-    println("avg discriminator loss = ", Float32(dscr_loss / skip))
+    println("avg generator loss     = ", Float32(gen_loss))
+    println("avg discriminator loss = ", Float32(dscr_loss))
 end
 
 end
